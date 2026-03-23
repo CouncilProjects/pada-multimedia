@@ -1,0 +1,11 @@
+# Ignore compiled Java classes
+**/bin/
+**/*.class
+
+# Ignore temp files
+RemoteSystemsTempFiles/
+.metadata/
+# Optional: Eclipse project files you might not need
+*.tmp
+*.bak
+*.swp
