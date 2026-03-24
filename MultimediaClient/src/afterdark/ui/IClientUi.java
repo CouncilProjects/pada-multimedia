@@ -11,4 +11,8 @@ public interface IClientUi {
 	void addCloseButtonListener(ActionListener action);
 	
 	void signalClose();
+	
+	void connectedOk();
+	
+	void speedTestDone();
 }

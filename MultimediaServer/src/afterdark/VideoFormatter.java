@@ -40,18 +40,23 @@ public class VideoFormatter {
 	public void formatAllVideos() {
 		File dir = new File(pathToVideoFile);
 		
+		// we will make sure this is a directory
 		if(!dir.isDirectory()) {
 			System.err.println("Not a directory : "+pathToVideoFile);
 			return;
 		}
 		
+		//then we will get all the files that are in the formats we support
 		File[] videoFiles = dir.listFiles((file, name) -> (name.endsWith(".mp4") || name.endsWith(".avi") || name.endsWith(".mkv")));
-
+		
+		//and we will also make a set with the names for easy search
 		Set<String> videoNames = new HashSet<>();
 		if (videoFiles != null) {
 			for (File f : videoFiles) videoNames.add(f.getName());
 		}
 		
+		// Since we want to make the videos in all resolutions, we need to find for each video its highest resolution
+		// We will find the highest video for example example_video-720p.mp4 and we will use it as the base for all formats 
 		Map<String,List<String>> pairsHighestQuality = new HashMap<String,List<String>>();
 		
 		
@@ -68,10 +73,8 @@ public class VideoFormatter {
 			}
 		}
 		
-		System.out.println(pairsHighestQuality);
-		System.out.println(resolutions.keySet());
-		
-		//now for each video we have its highest qualiry. 
+		//now for each video we have its highest qualiry.
+		// So now we go over every format for every video and every resolution and we make whats missing
 		for(String format : formats) {
 			for(String videoName : pairsHighestQuality.keySet()) {
 				Path videoSrc = Paths.get(pathToVideoFile+"/"+videoName+"-"+pairsHighestQuality.get(videoName).getFirst()+"."+pairsHighestQuality.get(videoName).getLast());
@@ -85,16 +88,13 @@ public class VideoFormatter {
 						// we made jaffree do ffmpeg -i input.mp4 -vf scale=1280:720 output.mp4
 						Path videoOut = Paths.get(pathToVideoFile+"/"+videoName+"-"+resolutionKey+"."+format);
 						int targetHeight = resolutions.get(resolutionKey);
-						String scaleFilter = "scale=-2:" + targetHeight; // width=-2 keeps aspect ratio
-		                
-						
+						 
 						try {
 							FFmpeg.atPath()
 							.addInput(UrlInput.fromPath(videoSrc))
 							.addOutput(UrlOutput.toPath(videoOut)
-									.addArguments("-vf", "scale=-2:" + targetHeight)
-									.addArguments("-c:v", "libx264")
-									.setFormat("matroska")
+									.addArguments("-vf", "scale=-2:" + targetHeight) // width=-2 keeps aspect ratio
+									.setFormat(format.equalsIgnoreCase("mkv") ? "matroska" : format) // for some reason doing format .mkv wont work and needs the matroska key
 							)
 							.execute();
 						} catch (Exception e) {

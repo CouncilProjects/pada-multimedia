@@ -1,6 +1,7 @@
 package afterdark;
 
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 import afterdark.ui.IClientUi;
 import afterdark.ui.MainWindow;
@@ -21,6 +22,16 @@ public class Initializer {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
+		try {
+			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		} catch (Exception e) {
+			
+			try {
+				UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+			} catch (Exception e2) {
+				// TODO: handle exception
+			}
+		}
 		
 		SwingUtilities.invokeLater(() -> {
 			IClientUi ui =  new MainWindow();

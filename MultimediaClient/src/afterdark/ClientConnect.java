@@ -6,6 +6,9 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import afterdark.ui.IClientUi;
 
@@ -31,9 +34,25 @@ public class ClientConnect {
 	}
     
     public void startConnection(String ip, int port) throws UnknownHostException, IOException {
-        clientSocket = new Socket(ip, port);
-        out = new PrintWriter(clientSocket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        try {
+			clientSocket = new Socket(ip, port);
+			out = new PrintWriter(clientSocket.getOutputStream(), true);
+			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			uiLayer.connectedOk();
+			
+			ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+			scheduler.schedule(() -> {
+			    uiLayer.speedTestDone();
+			}, 3, TimeUnit.SECONDS);
+			
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
 
     public String sendMessage(String command,String msg) throws IOException {
@@ -72,7 +91,7 @@ public class ClientConnect {
 			if((resp=sendMessage("close", "I sent a close command Close")).equalsIgnoreCase("close")) {
     			System.out.println("Was told to close [client]");
     			stopConnection();
-    			uiLayer.signalClose();
+    			
     			System.exit(0);
     		}
 		} catch (Exception e) {
