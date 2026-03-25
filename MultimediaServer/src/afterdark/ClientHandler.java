@@ -8,12 +8,19 @@ import java.net.Socket;
 
 public class ClientHandler extends Thread {
 	private Socket clientSocket;
+	private VideoFormatter videoHandle;
 	private PrintWriter out;
     private BufferedReader in;
     String command;
 	
-	public ClientHandler(Socket sock) {
+	public ClientHandler(Socket sock,VideoFormatter vidHandle) {
 		clientSocket = sock;
+		videoHandle = vidHandle;
+	}
+	
+	private void sendMessage(String command,String data) {
+		out.println(command);
+		out.println(data);
 	}
 	
 	public void run() {
@@ -32,18 +39,23 @@ public class ClientHandler extends Thread {
 					//0 means close
 					System.out.println("Was told to close [server]");
 					out.println("close");
+					sendMessage("close", "");
 					clientSocket.close();
 					return;
-				} else if(command.equals("test")) {
-					String firststStageInput = in.readLine();
-					test(firststStageInput);
-					out.println("Done");
+				} else if(command.equals("give-list")) {
+					String[] incoming = in.readLine().split("\\|");
+					String list = String.join(",",videoHandle.giveValidList(incoming[0], incoming[1]));
+					sendMessage("get-list", list);
 				}
 			}
 		} catch (Exception e) {
 			// TODO: handle exception
+			e.printStackTrace();
+			System.out.println("HELLOOOOO");
 		}
 	}
+	
+	
 	
 	private void test(String in) {
 		System.out.println("Test complete");

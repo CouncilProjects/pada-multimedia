@@ -76,6 +76,11 @@ public class MainWindow extends JFrame implements IClientUi{
 		contentPanel.add(loaderView,"loading");
 		contentPanel.add(choicespanel,"choice");
 		
+		choicespanel.setUserAction((e)->{
+			String format = e.getActionCommand();
+			controller.sendFormatSelection(format);
+		});
+		
 		setVisible(true);
 	}
 	
@@ -121,6 +126,12 @@ public class MainWindow extends JFrame implements IClientUi{
 	public void setSpeedTestProgress(String prog, String octo, String bit) {
 		// TODO Auto-generated method stub
 		loaderView.setTestResult(prog, octo, bit);
+	}
+	
+	@Override
+	public void showVideoList(String[] list) {
+		// TODO Auto-generated method stub
+		choicespanel.setVideos(list);
 	}
 	
 	

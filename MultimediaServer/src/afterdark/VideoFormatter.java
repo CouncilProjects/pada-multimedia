@@ -1,9 +1,9 @@
 package afterdark;
 
 import java.io.File;
-import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -12,16 +12,16 @@ import java.util.Map;
 import java.util.Set;
 
 import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
-import com.github.kokorin.jaffree.ffmpeg.FilterChain;
-import com.github.kokorin.jaffree.ffmpeg.FilterGraph;
 import com.github.kokorin.jaffree.ffmpeg.UrlInput;
 import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
 
 public class VideoFormatter {
+	// where to look for videos
 	private String pathToVideoFile;
+	
+	//the foramts and resolutions we want
 	private static String[] formats = {"avi","mp4","mkv"};
 	private static Map<String, Integer> resolutions = new LinkedHashMap<>();
-
     static {
         resolutions.put("240p", 240);
         resolutions.put("360p", 360);
@@ -30,11 +30,23 @@ public class VideoFormatter {
         resolutions.put("1080p", 1080);
     }
 	
-	
-	
+	//categorize based on format and then resolution
+	public Map<String,Map<String,List<String>>> publicVideoList = new HashMap<String, Map<String,List<String>>>();
+
+
 	public VideoFormatter(String workpath) {
 		pathToVideoFile = workpath;
+		
+		// initialize public-video-list
+        for (String format : formats) {
+            Map<String, List<String>> resolutionMap = new LinkedHashMap<>();
+            for (String res : resolutions.keySet()) {
+                resolutionMap.put(res, new ArrayList<String>()); // empty list for each resolution of each format
+            }
+            publicVideoList.put(format, resolutionMap);
+        }
 	}
+	
 	
 	
 	public void formatAllVideos() {
@@ -77,16 +89,19 @@ public class VideoFormatter {
 		// So now we go over every format for every video and every resolution and we make whats missing
 		for(String format : formats) {
 			for(String videoName : pairsHighestQuality.keySet()) {
-				Path videoSrc = Paths.get(pathToVideoFile+"/"+videoName+"-"+pairsHighestQuality.get(videoName).getFirst()+"."+pairsHighestQuality.get(videoName).getLast());
+				String srcName = videoName+"-"+pairsHighestQuality.get(videoName).getFirst()+"."+pairsHighestQuality.get(videoName).getLast();
+				Path videoSrc = Paths.get(pathToVideoFile+"/"+srcName);
 				
 
 				for(String resolutionKey : resolutions.keySet()) {
-					if(videoNames.contains(videoName+"-"+resolutionKey+"."+format)) {
+					String candidateName = videoName+"-"+resolutionKey+"."+format;
+					
+					if(videoNames.contains(candidateName)) {
 						System.out.println("Already exists, skipping");
 					} else {
-						System.out.println("Making : "+videoName+"-"+resolutionKey+"."+format);
+						System.out.println("Making : "+candidateName);
 						// we made jaffree do ffmpeg -i input.mp4 -vf scale=1280:720 output.mp4
-						Path videoOut = Paths.get(pathToVideoFile+"/"+videoName+"-"+resolutionKey+"."+format);
+						Path videoOut = Paths.get(pathToVideoFile+"/"+candidateName);
 						int targetHeight = resolutions.get(resolutionKey);
 						 
 						try {
@@ -104,6 +119,8 @@ public class VideoFormatter {
 						}
 					}
 					
+					publicVideoList.get(format).get(resolutionKey).add(candidateName);
+					
 					//reached max quality
 					if(resolutionKey.equalsIgnoreCase(pairsHighestQuality.get(videoName).getFirst())) {
 						break;
@@ -112,9 +129,41 @@ public class VideoFormatter {
 			}
 		}
 		
+		System.out.println(publicVideoList);
+		
 	}
 	
 	private boolean isHigher(String current, String candidate) {
 	    return resolutions.get(candidate) > resolutions.get(current);
+	}
+	
+	// This will figure out the proper quality based on client speed
+	public List<String> giveValidList(String format,String speed) {
+		double speedKbps = Double.parseDouble(speed);
+		
+		String highestAdaptive = "";
+		List<String> lists = new ArrayList<String>();
+
+		if (speedKbps >= 4500) {          
+		    highestAdaptive = "1080p";
+		} else if (speedKbps >= 2500) {   
+		    highestAdaptive = "720p";
+		} else if (speedKbps >= 1000) {   
+		    highestAdaptive = "480p";
+		} else if (speedKbps >= 750) {    
+		    highestAdaptive = "360p";
+		} else {                          
+		    highestAdaptive = "240p";
+		}
+		
+		for(String resolution : publicVideoList.get(format).keySet()) {
+			if(!isHigher(highestAdaptive, resolution) && !publicVideoList.get(format).get(resolution).isEmpty()) {
+				lists.add(String.join(",", publicVideoList.get(format).get(resolution)));
+			} else {
+				break;
+			}
+		}
+		System.out.println(lists);
+		return lists;
 	}
 }

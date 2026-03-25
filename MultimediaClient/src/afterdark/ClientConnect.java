@@ -63,11 +63,12 @@ public class ClientConnect {
 		}
     }
 
-    public String sendMessage(String command,String msg) throws IOException {
+    public String[] sendMessage(String command,String msg) throws IOException {
     	out.println(command);
         out.println(msg);
-        String resp = in.readLine();
-        return resp;
+        String respCommand = in.readLine();
+        String respData = in.readLine();
+        return new String[] {respCommand,respData};
     }
 
     public void stopConnection() throws IOException {
@@ -79,8 +80,8 @@ public class ClientConnect {
     
     public void close() {
 		try {
-			String resp;
-			if((resp=sendMessage("close", "I sent a close command Close")).equalsIgnoreCase("close")) {
+			String[] resp;
+			if((resp=sendMessage("close", "I sent a close command Close"))[0].equalsIgnoreCase("close")) {
     			System.out.println("Was told to close [client]");
     			stopConnection();
     			
@@ -90,4 +91,20 @@ public class ClientConnect {
 			// TODO: handle exception
 		}
 	}
+    
+    public void sendFormatSelection(String format) {
+    	String[] respList;
+    	String properFormat = format.replace(".", "");
+    	System.out.println(properFormat);
+    	try {
+			if((respList = sendMessage("give-list", properFormat+"|"+mySpeed))[0].equals("get-list")) {
+				String[] list = respList[1].split(",");
+				System.out.println(list[0]);
+				uiLayer.showVideoList(list);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    }
 }
