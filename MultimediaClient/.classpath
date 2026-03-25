@@ -6,5 +6,8 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib/fr.bmartel.jspeedtest-1.32.1.jar"/>
+	<classpathentry kind="lib" path="lib/slf4j-api-2.0.17.jar"/>
+	<classpathentry kind="lib" path="lib/http-endec-1.04.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

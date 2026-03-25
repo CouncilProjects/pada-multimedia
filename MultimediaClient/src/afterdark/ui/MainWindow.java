@@ -10,6 +10,8 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.IOException;
+import java.net.UnknownHostException;
 import java.awt.FlowLayout;
 import java.awt.Toolkit;
 import java.awt.Color;
@@ -19,8 +21,11 @@ import javax.swing.JPanel;
 import javax.swing.JLabel;
 import javax.swing.border.EmptyBorder;
 
+import afterdark.ClientConnect;
+
 public class MainWindow extends JFrame implements IClientUi{
 	ActionListener closeListener;
+	private ClientConnect controller;
 	JPanel footerPanel = new JPanel();
 	JLabel lblPadaIce = new JLabel("2026-2027 PADA ICE ");
 	
@@ -30,6 +35,9 @@ public class MainWindow extends JFrame implements IClientUi{
 	Choices choicespanel = new Choices();
 	
 	
+	public void setController(ClientConnect controller) {
+	    this.controller = controller;
+	}
 	
 	public MainWindow() {
 		setTitle("ICE media-player");
@@ -43,7 +51,7 @@ public class MainWindow extends JFrame implements IClientUi{
 				if(closeListener != null) {
 					closeListener.actionPerformed(new ActionEvent(this, ActionEvent.ACTION_PERFORMED,"windowClosing"));
 				}
-				signalClose();
+				controller.close();
 			}
 		});
 		getContentPane().setLayout(new BorderLayout(0, 0));
@@ -77,32 +85,26 @@ public class MainWindow extends JFrame implements IClientUi{
 		footerPanel.revalidate();
 		footerPanel.repaint();
 	}
-
+	
 	@Override
-	public void onResponseRecieved(String msg) {
-		// TODO Auto-generated method stub
-		SwingUtilities.invokeLater(() -> {
-
-		});
+	public void start() {
+		try {
+			controller.startConnection("127.0.0.1", 5000);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
-
-	@Override
-	public void addButtonListener(ActionListener action) {
-
-	}
-
+	
 	@Override
 	public void signalClose() {
+		// TODO Auto-generated method stub
 		this.dispose();
-		
 	}
-
-	@Override
-	public void addCloseButtonListener(ActionListener action) {
-		closeListener = action;
-		
-	}
-
+	
 	@Override
 	public void connectedOk() {
 		// TODO Auto-generated method stub
@@ -111,8 +113,14 @@ public class MainWindow extends JFrame implements IClientUi{
 	
 	@Override
 	public void speedTestDone() {
+		// TODO Auto-generated method stub
 		cardLayout.show(contentPanel, "choice");
-		
+	}
+	
+	@Override
+	public void setSpeedTestProgress(String prog, String octo, String bit) {
+		// TODO Auto-generated method stub
+		loaderView.setTestResult(prog, octo, bit);
 	}
 	
 	

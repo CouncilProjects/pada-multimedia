@@ -17,21 +17,13 @@ public class ClientConnect {
 	private Socket clientSocket;
     private PrintWriter out;
     private BufferedReader in;
+    private SpeedTestCallbacks callbacks;
+    private String mySpeed="0";
     
     public ClientConnect(IClientUi cliUI) {
     	uiLayer = cliUI;
-    	setListeners();
+    	callbacks = new SpeedTestCallbacks();
     }
-    
-    private void setListeners() {
-		uiLayer.addButtonListener((e)->{
-			testCon();
-		});
-		
-		uiLayer.addCloseButtonListener((e)->{
-			close();
-		});
-	}
     
     public void startConnection(String ip, int port) throws UnknownHostException, IOException {
         try {
@@ -40,18 +32,34 @@ public class ClientConnect {
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			uiLayer.connectedOk();
 			
-			ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
-			scheduler.schedule(() -> {
-			    uiLayer.speedTestDone();
-			}, 3, TimeUnit.SECONDS);
-			
+			speedTest();
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+    }
+    
+    private void speedTest() {
+    	SpeedTester tester = new SpeedTester();
+    	tester.setUp(
+    			callbacks
+    	);
+    	tester.downlinkTest();
+    }
+    
+    public class SpeedTestCallbacks {
+
+    	
+		public void completed(String Mbps) {
+			mySpeed = Mbps;
+    		uiLayer.speedTestDone();
+    	}
+		
+		public void progress(String message,String octo,String bit) {
+			uiLayer.setSpeedTestProgress(message, octo, bit);
 		}
     }
 
@@ -68,22 +76,6 @@ public class ClientConnect {
         clientSocket.close();
     }
     
-    
-    public void testCon() {
-    	String resp;
-    	try {
-    		
-    		if((resp=sendMessage("test", "Test message from client")).equalsIgnoreCase("Done")) {
-    			System.out.println("I was called to test");
-    			uiLayer.onResponseRecieved(resp);
-    			uiLayer.addButtonListener((e)->{});
-    		}
-    	} catch (Exception e) {
-    		// TODO: handle exception
-    		e.printStackTrace();
-    	}
-		
-	}
     
     public void close() {
 		try {

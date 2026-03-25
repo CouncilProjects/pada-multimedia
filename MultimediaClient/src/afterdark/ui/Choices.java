@@ -5,6 +5,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.event.ActionListener;
 
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
@@ -18,8 +19,14 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.Box;
 
 public class Choices extends JPanel {
+	JLabel explLabel = new JLabel("Select your prefered choices");
+	JPanel panel = new JPanel();
 	JComboBox formatComboBox = new JComboBox();
 	JComboBox protocolComboBox = new JComboBox();
+	JButton submitChoicesBtn = new JButton("Send selection");
+	String[] videos = {};
+	JSeparator separator = new JSeparator();
+	
 	
 	private static final long serialVersionUID = 1L;
 
@@ -29,12 +36,12 @@ public class Choices extends JPanel {
 	public Choices() {
 		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 		
-		JLabel explLabel = new JLabel("Select your prefered format and protocol");
+		
 		explLabel.setBorder(new EmptyBorder(10, 0, 0, 0));
 		explLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 		add(explLabel);
 		
-		JPanel panel = new JPanel();
+		
 		panel.setAlignmentX(Component.CENTER_ALIGNMENT);
 		panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 		panel.setBorder(new CompoundBorder(new EtchedBorder(EtchedBorder.LOWERED, null, new Color(51, 209, 122)), new EmptyBorder(10, 10, 10, 10)));
@@ -47,7 +54,7 @@ public class Choices extends JPanel {
 		formatComboBox.setMaximumRowCount(3);
 		panel.add(formatComboBox);
 		
-		JSeparator separator = new JSeparator();
+		
 		separator.setBorder(new EmptyBorder(3, 0, 3, 0));
 		separator.setMaximumSize(new Dimension(32767, 3));
 		panel.add(separator);
@@ -55,17 +62,18 @@ public class Choices extends JPanel {
 
 		
 		fixComboHeight(protocolComboBox);
-		protocolComboBox.setModel(new DefaultComboBoxModel(new String[] {"UDP", "TCP", "RDP"}));
+		protocolComboBox.setModel(new DefaultComboBoxModel(new String[] {"TCP","UDP",  "RDP"}));
 		protocolComboBox.setBorder(new EmptyBorder(10, 30, 0, 30));
 		protocolComboBox.setMaximumRowCount(3);
 		panel.add(protocolComboBox);
+		protocolComboBox.setVisible(videos.length>0);
 		
 		JSeparator separator_1 = new JSeparator();
 		separator_1.setBorder(new EmptyBorder(3, 0, 3, 0));
 		separator_1.setMaximumSize(new Dimension(32767, 3));
 		panel.add(separator_1);
 		
-		JButton submitChoicesBtn = new JButton("Send selection");
+		
 		submitChoicesBtn.setBackground(new Color(55, 168, 172));
 		submitChoicesBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
 		submitChoicesBtn.setBorder(UIManager.getBorder("Button.border"));
@@ -76,6 +84,18 @@ public class Choices extends JPanel {
 	private void fixComboHeight(JComboBox<?> combo) {
 	    Dimension size = combo.getPreferredSize();
 	    combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, size.height));
+	}
+	
+	public void getVideos(String[] vids) {
+		videos = vids;
+	}
+	
+	public String getFormat() {
+		return formatComboBox.getSelectedItem().toString();
+	}
+	
+	public void sendUserFormat(ActionListener e) {
+		submitChoicesBtn.addActionListener(e);
 	}
 
 }
