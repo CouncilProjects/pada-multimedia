@@ -20,6 +20,11 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.Box;
 import javax.swing.JScrollPane;
 
+
+interface UserChoiceListener{
+	void formatChoice(String cho);
+}
+
 public class Choices extends JPanel {
 	JLabel explLabel = new JLabel("Select your prefered choices");
 	JPanel panel = new JPanel();
@@ -28,9 +33,20 @@ public class Choices extends JPanel {
 	JButton submitChoicesBtn = new JButton("Send selection");
 	String[] videos = {};
 	JSeparator separator = new JSeparator();
-	ActionListener listener;
+	UserChoiceListener formatChoice;
+	
+	public void setFormatChoice(UserChoiceListener formatChoice) {
+		this.formatChoice = formatChoice;
+	}
+
+	VideoActionListener vidActionListener;
 	
 	
+	
+	public void setVidActionListener(VideoActionListener vidActionListener) {
+		this.vidActionListener = vidActionListener;
+	}
+
 	private static final long serialVersionUID = 1L;
 	private final JScrollPane videoSelectionScrollPane = new JScrollPane();
 	private final JPanel videoSelectionPane = new JPanel();
@@ -54,6 +70,7 @@ public class Choices extends JPanel {
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 		
 		fixComboHeight(formatComboBox);
+		formatComboBox.setBackground(new Color(94, 92, 100));
 		formatComboBox.setModel(new DefaultComboBoxModel(new String[] {".mp4", ".avi", ".mkv"}));
 		formatComboBox.setBorder(new EmptyBorder(0, 30, 0, 30));
 		formatComboBox.setMaximumRowCount(3);
@@ -73,6 +90,8 @@ public class Choices extends JPanel {
 
 		
 		fixComboHeight(protocolComboBox);
+		protocolComboBox.setBackground(new Color(94, 92, 100));
+		protocolComboBox.setForeground(new Color(248, 228, 92));
 		panel.add(protocolComboBox);
 		protocolComboBox.setModel(new DefaultComboBoxModel(new String[] {"TCP","UDP",  "RDP"}));
 		protocolComboBox.setBorder(new EmptyBorder(10, 30, 0, 30));
@@ -93,15 +112,7 @@ public class Choices extends JPanel {
 	
 	private void fixComboHeight(JComboBox<?> combo) {
 	    Dimension size = combo.getPreferredSize();
-	    combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, size.height));
-	}
-	
-	public void getVideos(String[] vids) {
-		videos = vids;
-	}
-	
-	public void setUserAction(ActionListener action) {
-		listener = action;
+	    combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, Math.min(size.height,100)));
 	}
 	
 	public void setVideos(String[] vids) {
@@ -112,10 +123,18 @@ public class Choices extends JPanel {
 		videoSelectionPane.removeAll();
 		
 		for(String vid : videos) {
-			System.out.println(vid);
-	        VideoControll lbl = new VideoControll(vid);
-	        lbl.setAlignmentX(Component.CENTER_ALIGNMENT);
-	        videoSelectionPane.add(lbl);
+
+	        VideoControll videoControlElem = new VideoControll(vid);
+	        
+	        videoControlElem.setVidActionListener(vidAction -> {
+	        	vidAction.setProto(protocolComboBox.getSelectedItem().toString());
+	        	if(vidActionListener != null) {
+	        		vidActionListener.onVideoInteract(vidAction);
+	        	}
+	        });
+	        
+	        videoControlElem.setAlignmentX(Component.CENTER_ALIGNMENT);
+	        videoSelectionPane.add(videoControlElem);
 	        videoSelectionPane.add(Box.createVerticalStrut(10));
 	        
 	    }
@@ -124,10 +143,8 @@ public class Choices extends JPanel {
 	}
 	
 	void userSubmitedFormat() {
-		if(listener!=null) {
-			listener.actionPerformed(
-					new ActionEvent(this, ActionEvent.ACTION_PERFORMED, formatComboBox.getSelectedItem().toString())
-			);
+		if(formatChoice!=null) {
+			formatChoice.formatChoice(formatComboBox.getSelectedItem().toString());
 		}
 	}
 

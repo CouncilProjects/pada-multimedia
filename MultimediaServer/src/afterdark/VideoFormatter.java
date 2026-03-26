@@ -1,6 +1,9 @@
 package afterdark;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -48,7 +51,9 @@ public class VideoFormatter {
 	}
 	
 	
-	
+	// Will look in the workdir given and 
+	// 1) make with jaffree all the missing videos
+	// 2) build the list of videos that will then be given to clients
 	public void formatAllVideos() {
 		File dir = new File(pathToVideoFile);
 		
@@ -119,6 +124,7 @@ public class VideoFormatter {
 						}
 					}
 					
+					/// here we also build video by video the stream list
 					publicVideoList.get(format).get(resolutionKey).add(candidateName);
 					
 					//reached max quality
@@ -129,14 +135,14 @@ public class VideoFormatter {
 			}
 		}
 		
-		System.out.println(publicVideoList);
-		
+		System.out.println(publicVideoList);	
 	}
 	
 	private boolean isHigher(String current, String candidate) {
 	    return resolutions.get(candidate) > resolutions.get(current);
 	}
 	
+	//Adaptive quality
 	// This will figure out the proper quality based on client speed
 	public List<String> giveValidList(String format,String speed) {
 		double speedKbps = Double.parseDouble(speed);
@@ -165,5 +171,51 @@ public class VideoFormatter {
 		}
 		System.out.println(lists);
 		return lists;
+	}
+	
+	//Streaming
+	// here the process builder will do an ffmpeg coomand
+	//https://trac.ffmpeg.org/wiki/StreamingGuide#Pointtopointstreaming
+	public void streamVid(String vid,String proto,String port) {
+		System.out.println("{SERVER} : will try to stream to port : "+port);
+		try {
+			ProcessBuilder process = new ProcessBuilder(
+					"ffmpeg",
+					"-re", //needed for streaming or else ffmpeg will move too fast https://trac.ffmpeg.org/wiki/StreamingGuide#The-reflag
+					"-i",
+					pathToVideoFile+"/"+vid,
+					"-c:v", "libx264", "-c:a", "aac",
+					"-f",
+					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
+							proto+"://127.0.0.1:"+port
+					);
+			process.redirectErrorStream(true);
+			Process pro = process.start();
+			
+			BufferedReader reader = new BufferedReader(
+				    new InputStreamReader(pro.getInputStream())
+				);
+
+			new Thread(()->{
+				String line;
+				try {
+					while ((line = reader.readLine()) != null) {
+					    System.out.println("[FFMPEG] " + line);
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}).run();
+				
+			int exit = pro.waitFor();
+			System.out.println("Finished with "+ exit);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

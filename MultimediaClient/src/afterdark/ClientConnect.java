@@ -10,7 +10,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import javax.swing.SwingUtilities;
+
 import afterdark.ui.IClientUi;
+import afterdark.ui.dto.VideoAction;
 
 public class ClientConnect {
 	private IClientUi uiLayer;
@@ -91,6 +94,69 @@ public class ClientConnect {
 			// TODO: handle exception
 		}
 	}
+    
+    public void videoAction(VideoAction action) {
+    	if(action.getAction().equals("down")) {
+    		
+    	} else if(action.getAction().equals("play")) {
+    		String[] respReq;
+    		try {
+    			if((respReq = sendMessage("video-req", action.getProto()+"|"+action.getVideo()))[0].equals("get-port")) {
+    				uiLayer.loadingVid("Loading "+action.getVideo());
+    				String portRespo = respReq[1];
+    				ProcessBuilder process = new ProcessBuilder(
+    						"ffplay",
+    						"-i",
+    						action.getProto().toLowerCase()+"://127.0.0.1:"+portRespo+"?listen"
+    						);
+    				
+    				
+    				process.redirectErrorStream(true);
+    				Process pro = process.start();
+    				
+    				
+    				BufferedReader reader = new BufferedReader(
+    					    new InputStreamReader(pro.getInputStream())
+    					);
+
+    				new Thread(()->{
+    					String line;
+    					try {
+    						while ((line = reader.readLine()) != null) {
+    						    System.out.println("[FFMPEG] " + line);
+    						}
+    					} catch (IOException e) {
+    						// TODO Auto-generated catch block
+    						e.printStackTrace();
+    					}
+    				}).start();
+    				
+    				Thread.sleep(500);
+    				
+    				out.println("cli-ready");
+ 
+    				new Thread(() -> {
+    				    try {
+    				        int exit = pro.waitFor();
+
+    				        SwingUtilities.invokeLater(() -> {
+    				            uiLayer.doneLoading();
+    				        });
+
+    				    } catch (InterruptedException e) {
+    				        e.printStackTrace();
+    				    }
+    				}).start();
+    			}
+    		} catch (IOException e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    		} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+    }
     
     public void sendFormatSelection(String format) {
     	String[] respList;

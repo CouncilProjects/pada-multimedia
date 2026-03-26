@@ -76,9 +76,20 @@ public class MainWindow extends JFrame implements IClientUi{
 		contentPanel.add(loaderView,"loading");
 		contentPanel.add(choicespanel,"choice");
 		
-		choicespanel.setUserAction((e)->{
-			String format = e.getActionCommand();
-			controller.sendFormatSelection(format);
+		choicespanel.setFormatChoice((e)->{
+			controller.sendFormatSelection(e);
+		});
+		
+//		this is a short version of doing 
+//		new VidActionListener() {
+//		    @Override
+//		    public void onAction(SelectionData dtoIn) {
+//		        Some code.
+//		    }
+//		}
+		
+		choicespanel.setVidActionListener(vidAction -> {
+			controller.videoAction(vidAction);
 		});
 		
 		setVisible(true);
@@ -106,33 +117,58 @@ public class MainWindow extends JFrame implements IClientUi{
 	
 	@Override
 	public void signalClose() {
-		// TODO Auto-generated method stub
-		this.dispose();
+	    SwingUtilities.invokeLater(() -> {
+	        this.dispose();
+	    });
 	}
-	
+
 	@Override
 	public void connectedOk() {
-		// TODO Auto-generated method stub
-		loaderView.setLoadReason("Doing a speed test");
+	    SwingUtilities.invokeLater(() -> {
+	        loaderView.setLoadReason("Doing a speed test");
+	    });
 	}
-	
+
 	@Override
 	public void speedTestDone() {
-		// TODO Auto-generated method stub
-		cardLayout.show(contentPanel, "choice");
+	    SwingUtilities.invokeLater(() -> {
+	        cardLayout.show(contentPanel, "choice");
+	    });
 	}
-	
+
 	@Override
 	public void setSpeedTestProgress(String prog, String octo, String bit) {
-		// TODO Auto-generated method stub
-		loaderView.setTestResult(prog, octo, bit);
+	    SwingUtilities.invokeLater(() -> {
+	        loaderView.setTestResult(prog, octo, bit);
+	    });
 	}
-	
+
 	@Override
 	public void showVideoList(String[] list) {
-		// TODO Auto-generated method stub
-		choicespanel.setVideos(list);
+	    SwingUtilities.invokeLater(() -> {
+	        choicespanel.setVideos(list);
+	    });
 	}
+
+	@Override
+	public void loadingVid(String message) {
+		System.out.println("DI IT");
+	    SwingUtilities.invokeLater(() -> {
+	        loaderView.setLoadReason(message);
+	        cardLayout.show(contentPanel, "loading");
+	        contentPanel.revalidate();
+	        contentPanel.repaint();
+	    });
+	}
+
+	@Override
+	public void doneLoading() {
+	    SwingUtilities.invokeLater(() -> {
+	        cardLayout.show(contentPanel, "choice");
+	    });
+	}
+	
+	
 	
 	
 }

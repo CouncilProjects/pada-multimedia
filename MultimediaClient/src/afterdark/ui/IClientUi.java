@@ -15,4 +15,8 @@ public interface IClientUi {
 	void setSpeedTestProgress(String prog,String octo,String bit);
 	
 	void showVideoList(String[] list);
+	
+	void loadingVid(String message);
+	
+	void doneLoading();
 }
