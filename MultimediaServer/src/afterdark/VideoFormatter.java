@@ -218,4 +218,46 @@ public class VideoFormatter {
 			e.printStackTrace();
 		}
 	}
+	
+	
+	public void cliDownload(String vid,String proto,String port) {
+		System.out.println("{SERVER} : will let client download at : "+port);
+		try {
+			ProcessBuilder process = new ProcessBuilder(
+					"ffmpeg",
+					"-i",
+					pathToVideoFile+"/"+vid,
+					"-f",
+					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
+					proto+"://127.0.0.1:"+port
+				);
+			process.redirectErrorStream(true);
+			Process pro = process.start();
+			
+			BufferedReader reader = new BufferedReader(
+				    new InputStreamReader(pro.getInputStream())
+				);
+
+			new Thread(()->{
+				String line;
+				try {
+					while ((line = reader.readLine()) != null) {
+					    System.out.println("[FFMPEG] " + line);
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}).run();
+				
+			int exit = pro.waitFor();
+			System.out.println("Finished with "+ exit);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }

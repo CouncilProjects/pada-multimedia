@@ -16,11 +16,13 @@ class CurrentVidReqInfo{
 	String video;
 	String proto;
 	String port;
+	String action;
 	
-	void baseSetup(String video,String proto,String port) {
+	void baseSetup(String video,String proto,String port,String act) {
 		this.video=video;
 		this.proto = proto;
 		this.port = port;
+		this.action = act;
 	}
 	
 	
@@ -30,6 +32,7 @@ class CurrentVidReqInfo{
 		info.add(video);
 		info.add(proto);
 		info.add(port);
+		info.add(action);
 		return info;
 	}
 }
@@ -39,13 +42,15 @@ public class ClientHandler extends Thread {
 	private VideoFormatter videoHandle;
 	private PrintWriter out;
     private BufferedReader in;
+    private String serverId;
     private CurrentVidReqInfo reserved = new CurrentVidReqInfo();
     String command;
     String latestfreePort;
 	
-	public ClientHandler(Socket sock,VideoFormatter vidHandle) {
+	public ClientHandler(Socket sock,VideoFormatter vidHandle,String serv) {
 		clientSocket = sock;
 		videoHandle = vidHandle;
+		this.serverId = serv;
 	}
 	
 	private void sendMessage(String command,String data) {
@@ -57,6 +62,7 @@ public class ClientHandler extends Thread {
 		try {
 			out = new PrintWriter(clientSocket.getOutputStream(),true);
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			sendMessage("get-id", serverId);
 		} catch (IOException e) {
 			System.err.println("Failed to get streams");
 			e.printStackTrace();
@@ -76,8 +82,8 @@ public class ClientHandler extends Thread {
 				} else if(command.equals("cli-ready")) { //when the client is ready clear the pending request data and let ffmpgeg do its job
 					List<String> info = reserved.getData();
 					
-					reserved.baseSetup(null, null,null);
-					letFfmpeghandle(info.get(0), info.get(1),info.get(2));
+					reserved.baseSetup(null, null,null,null);
+					letFfmpeghandle(info.get(0), info.get(1),info.get(2),info.get(3));
 				}
 			}
 		} catch (Exception e) {
@@ -109,7 +115,7 @@ public class ClientHandler extends Thread {
 			int freeport = nextFreeSocket.getLocalPort();
 			nextFreeSocket.close();
 			latestfreePort = String.valueOf(freeport);
-			reserved.baseSetup(data[1], data[0].toLowerCase(), latestfreePort);
+			reserved.baseSetup(data[1], data[0].toLowerCase(), latestfreePort,data[2]);
 			
 			sendMessage("get-port", latestfreePort); // the next step is most likely that the client will send a ready command
 			
@@ -119,8 +125,13 @@ public class ClientHandler extends Thread {
 	}
 	
 	
-	private void letFfmpeghandle(String vid,String proto,String port) {
-		System.out.println("{SERVER} will try to let ffmpeg hanlde "+vid+" in "+proto+" at "+port);
-		videoHandle.streamVid(vid,proto,port);
+	private void letFfmpeghandle(String vid,String proto,String port,String action) {
+		System.out.println("{SERVER} will try to let ffmpeg hanlde "+vid+" in "+proto+" at "+port +" for "+action);
+		if(action.equals("play")) {
+			videoHandle.streamVid(vid,proto,port);
+		} else {
+			videoHandle.cliDownload(vid, proto, port);
+		}
+		
 	}
 }

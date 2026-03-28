@@ -6,9 +6,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import javax.swing.SwingUtilities;
 
@@ -22,6 +19,7 @@ public class ClientConnect {
     private BufferedReader in;
     private SpeedTestCallbacks callbacks;
     private String mySpeed="0";
+    private String downPath = System.getProperty("user.home")+"/Ice-multimedia";
     
     public ClientConnect(IClientUi cliUI) {
     	uiLayer = cliUI;
@@ -30,10 +28,14 @@ public class ClientConnect {
     
     public void startConnection(String ip, int port) throws UnknownHostException, IOException {
         try {
+        	System.out.println("HELLOOOOOOO");
 			clientSocket = new Socket(ip, port);
 			out = new PrintWriter(clientSocket.getOutputStream(), true);
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			uiLayer.connectedOk();
+			if(in.readLine().equals("get-id")) {
+				uiLayer.connectedOk(in.readLine());
+			}
+			
 			
 			speedTest();
 		} catch (UnknownHostException e) {
@@ -96,66 +98,94 @@ public class ClientConnect {
 	}
     
     public void videoAction(VideoAction action) {
-    	if(action.getAction().equals("down")) {
-    		
-    	} else if(action.getAction().equals("play")) {
-    		String[] respReq;
-    		try {
-    			if((respReq = sendMessage("video-req", action.getProto()+"|"+action.getVideo()))[0].equals("get-port")) {
-    				uiLayer.loadingVid("Loading "+action.getVideo());
-    				String portRespo = respReq[1];
-    				ProcessBuilder process = new ProcessBuilder(
-    						"ffplay",
-    						"-i",
-    						action.getProto().toLowerCase()+"://127.0.0.1:"+portRespo+"?listen"
-    						);
-    				
-    				
-    				process.redirectErrorStream(true);
-    				Process pro = process.start();
-    				
-    				
-    				BufferedReader reader = new BufferedReader(
-    					    new InputStreamReader(pro.getInputStream())
-    					);
+    	String[] respReq;
+    	ProcessBuilder processBuild = null;
+		try {
+			if((respReq = sendMessage("video-req", action.getProto()+"|"+action.getVideo()+"|"+action.getAction()))[0].equals("get-port")) {
+				uiLayer.loadingVid("Loading "+action.getVideo());
+				String portRespo = respReq[1];
+				if(action.getAction().equals("down")) {
+					//About the command. 
+		    		// We want the windo to exit when the video gets downloaded
+		    		//(udp does not have a "stop" flag because its connectionless so we set a timeout so it stops after 3 sec of no data
+					processBuild = new ProcessBuilder(
+							"ffmpeg",
+							"-timeout",
+							"3000000",
+							"-i",
+							action.getProto().toLowerCase()+"://127.0.0.1:"+portRespo+"?listen",
+							downPath+"/"+action.getVideo(),
+							"-y"
+							
+					);
+		    	} else if(action.getAction().equals("play")) {
+		    		//About the command. 
+		    		// We want the windo to exit when the video stops 
+		    		//(udp does not have a "stop" flag because its connectionless so we set a timeout so it stops after 3 sec of no data
+		    		//We also allow the user to use left and right buttons to go 3sec forward or backward using -seekinterval
+		    		//To also let the user know that the window that oppend is ours we set its title with window_title
+		    		processBuild = new ProcessBuilder(
+							"ffplay",
+							"-autoexit",  //https://ffmpeg.org/ffplay.html#toc-Advanced-options 
+							"-rw_timeout",
+							"3000000",
+							"-seek_interval", //https://ffmpeg.org/ffplay.html#toc-While-playing
+							"3000000",
+							"-window_title", "ICE media streaming", //ffplay opens a new window but we can control the title
+							"-i",
+							action.getProto().toLowerCase()+"://127.0.0.1:"+portRespo+"?listen"
+					);
+		    	}
+				
+				
+				
+				processBuild.redirectErrorStream(true);
+				//now we have the process start it
+				Process process = processBuild.start();
+				
+				//also get its output for debugging
+				BufferedReader reader = new BufferedReader(
+					    new InputStreamReader(process.getInputStream())
+					);
+				
+				//read the command output without blocking the thread
+				new Thread(()->{
+					String line;
+					try {
+						while ((line = reader.readLine()) != null) {
+						    System.out.println("[FFMPEG] " + line);
+						}
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}).start();
+				
+				//give prep time before leting server send the data
+				Thread.sleep(500);
+				
+				//inform server
+				out.println("cli-ready");
 
-    				new Thread(()->{
-    					String line;
-    					try {
-    						while ((line = reader.readLine()) != null) {
-    						    System.out.println("[FFMPEG] " + line);
-    						}
-    					} catch (IOException e) {
-    						// TODO Auto-generated catch block
-    						e.printStackTrace();
-    					}
-    				}).start();
-    				
-    				Thread.sleep(500);
-    				
-    				out.println("cli-ready");
- 
-    				new Thread(() -> {
-    				    try {
-    				        int exit = pro.waitFor();
+				new Thread(() -> {
+				    try {
+				        int exit = process.waitFor();
 
-    				        SwingUtilities.invokeLater(() -> {
-    				            uiLayer.doneLoading();
-    				        });
+				        SwingUtilities.invokeLater(() -> {
+				            uiLayer.doneLoading();
+				        });
 
-    				    } catch (InterruptedException e) {
-    				        e.printStackTrace();
-    				    }
-    				}).start();
-    			}
-    		} catch (IOException e) {
-    			// TODO Auto-generated catch block
-    			e.printStackTrace();
-    		} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				    } catch (InterruptedException e) {
+				        e.printStackTrace();
+				    }
+				}).start();
 			}
-    	}
+			} catch (Exception e2) {
+				// TODO: handle exception
+				e2.printStackTrace();
+			}
+			
+    	
     }
     
     public void sendFormatSelection(String format) {

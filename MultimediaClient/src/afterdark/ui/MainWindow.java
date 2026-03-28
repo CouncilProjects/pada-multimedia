@@ -103,9 +103,9 @@ public class MainWindow extends JFrame implements IClientUi{
 	}
 	
 	@Override
-	public void start() {
+	public void start(int port) {
 		try {
-			controller.startConnection("127.0.0.1", 5000);
+			controller.startConnection("127.0.0.1", port);
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -123,8 +123,9 @@ public class MainWindow extends JFrame implements IClientUi{
 	}
 
 	@Override
-	public void connectedOk() {
+	public void connectedOk(String serverId) {
 	    SwingUtilities.invokeLater(() -> {
+	    	lblPadaIce.setText(lblPadaIce.getText()+" Server: "+serverId);
 	        loaderView.setLoadReason("Doing a speed test");
 	    });
 	}
