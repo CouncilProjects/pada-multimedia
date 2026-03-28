@@ -5,14 +5,17 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Initializer {
-	private Server centralServer;
+
 	private VideoFormatter mediaFormatter;
 	private LoadBalancer loadBalancer;
 	private List<Server> servers = new ArrayList<Server>(); // reference to the servers
+    // Default values
+    String defaultDir = "/Videos/multimedia/videos";
+    int defaultServers = 3;
 	
 	public void start() {
 		// https://www.baeldung.com/jvm-shutdown-hooks#1-adding-hooks
-		//We will be keeping a reference of the servers and we will take them down
+		//We will be keeping a reference of the servers and we will take them down when the app is closed
 		Runtime.getRuntime().addShutdownHook(new Thread(()->{
 			for(Server s:servers) {
 				s.stopServer();
@@ -20,10 +23,6 @@ public class Initializer {
 		}));
 		
 		Scanner scanner = new Scanner(System.in);
-
-        // Default values
-        String defaultDir = "/Videos/multimedia/videos";
-        int defaultServers = 3;
 
         // Ask for working directory
         System.out.print("Enter working directory [Default : " + defaultDir + "]: ");
@@ -45,37 +44,37 @@ public class Initializer {
                 numServers = defaultServers;
             }
         }
-
-        // Output result
-        System.out.println("\nConfiguration:");
-        System.out.println("Working Directory: " + workingDir);
-        System.out.println("Number of Servers: " + numServers);
-
         scanner.close();
         
+        
+        
 		System.out.println("Starting preparations");
-		// Example: get videos path dynamically at runtime
+
         String videosPath = System.getProperty("user.home") + workingDir;
         System.out.println("Will be using "+videosPath+" as the media folder");
         
+        //Create the videoHanlder and a LoadBalancer
         this.mediaFormatter = new VideoFormatter(videosPath);
         this.loadBalancer = new LoadBalancer();
+        
+        //Have the load balancer run
         new Thread(this.loadBalancer).start();
 		
 		//first call videoformatter to format the videos directory
+        //The the videoFormatter will create all missing video files from the workDir
         mediaFormatter.formatAllVideos();
         
-        
+        // Try to spring up the number of requested servers. they will handle their load balancing registration themselves
 		try {
-			for(int i=0; i<numServers;i++) {
-				Server s = new Server(mediaFormatter, 5001+i, "server ID"+i);
+			for(int i=0; servers.size()<numServers ;i++) {
+				Server s = new Server(mediaFormatter, 5001+i, "ICE AD ID"+i); // Give a unique identifier for the Active Deployment instance just for logging purposes
 				Thread t = new Thread(s);
+				t.start();// if this fails the exception will be caught and a the server instance will not be counted
 				servers.add(s);
-				t.start();
 			}
 		} catch (Exception e) {
 			if(e.getMessage().equalsIgnoreCase("Server fail")) {
-				System.out.println("No idea");
+				System.out.println("A server failed to be made");
 			}
 		}
 		

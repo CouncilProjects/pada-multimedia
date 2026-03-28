@@ -92,6 +92,7 @@ public class VideoFormatter {
 		
 		//now for each video we have its highest qualiry.
 		// So now we go over every format for every video and every resolution and we make whats missing
+		int existingVids=0;
 		for(String format : formats) {
 			for(String videoName : pairsHighestQuality.keySet()) {
 				String srcName = videoName+"-"+pairsHighestQuality.get(videoName).getFirst()+"."+pairsHighestQuality.get(videoName).getLast();
@@ -102,10 +103,10 @@ public class VideoFormatter {
 					String candidateName = videoName+"-"+resolutionKey+"."+format;
 					
 					if(videoNames.contains(candidateName)) {
-						System.out.println("Already exists, skipping");
+						existingVids++;
 					} else {
 						System.out.println("Making : "+candidateName);
-						// we made jaffree do ffmpeg -i input.mp4 -vf scale=1280:720 output.mp4
+						// we made jaffree do ffmpeg commands
 						Path videoOut = Paths.get(pathToVideoFile+"/"+candidateName);
 						int targetHeight = resolutions.get(resolutionKey);
 						 
@@ -134,8 +135,7 @@ public class VideoFormatter {
 				}
 			}
 		}
-		
-		System.out.println(publicVideoList);	
+		System.out.println("[VIDEO HANDLER] Created missing videos pre-existing videos "+existingVids);
 	}
 	
 	private boolean isHigher(String current, String candidate) {
@@ -169,25 +169,26 @@ public class VideoFormatter {
 				break;
 			}
 		}
-		System.out.println(lists);
 		return lists;
 	}
 	
 	//Streaming
 	// here the process builder will do an ffmpeg coomand
 	//https://trac.ffmpeg.org/wiki/StreamingGuide#Pointtopointstreaming
-	public void streamVid(String vid,String proto,String port) {
+	public void streamVid(String vid,String proto,String port,String address) {
 		System.out.println("{SERVER} : will try to stream to port : "+port);
+		VideoStats stats = new VideoStats();
 		try {
 			ProcessBuilder process = new ProcessBuilder(
 					"ffmpeg",
 					"-re", //needed for streaming or else ffmpeg will move too fast https://trac.ffmpeg.org/wiki/StreamingGuide#The-reflag
 					"-i",
 					pathToVideoFile+"/"+vid,
+					"-progress","pipe:1", //https://ffmpeg.org/ffmpeg.html#toc-Main-options 
 					"-c:v", "libx264", "-c:a", "aac",
 					"-f",
 					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
-							proto+"://127.0.0.1:"+port
+							proto+"://"+address+":"+port
 					);
 			process.redirectErrorStream(true);
 			Process pro = process.start();
@@ -196,17 +197,7 @@ public class VideoFormatter {
 				    new InputStreamReader(pro.getInputStream())
 				);
 
-			new Thread(()->{
-				String line;
-				try {
-					while ((line = reader.readLine()) != null) {
-					    System.out.println("[FFMPEG] " + line);
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}).run();
+			new Thread(new ProcessOutParser(reader, stats)).start();
 				
 			int exit = pro.waitFor();
 			System.out.println("Finished with "+ exit);
@@ -220,8 +211,9 @@ public class VideoFormatter {
 	}
 	
 	
-	public void cliDownload(String vid,String proto,String port) {
-		System.out.println("{SERVER} : will let client download at : "+port);
+	public void cliDownload(String vid,String proto,String port,String address) {
+		System.out.println("{SERVER} : will let client download at : "+address+":"+port);
+		VideoStats stats = new VideoStats(); //will help when logging
 		try {
 			ProcessBuilder process = new ProcessBuilder(
 					"ffmpeg",
@@ -229,7 +221,7 @@ public class VideoFormatter {
 					pathToVideoFile+"/"+vid,
 					"-f",
 					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
-					proto+"://127.0.0.1:"+port
+					proto+"://"+address+":"+port
 				);
 			process.redirectErrorStream(true);
 			Process pro = process.start();
@@ -238,17 +230,7 @@ public class VideoFormatter {
 				    new InputStreamReader(pro.getInputStream())
 				);
 
-			new Thread(()->{
-				String line;
-				try {
-					while ((line = reader.readLine()) != null) {
-					    System.out.println("[FFMPEG] " + line);
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}).run();
+			new Thread(new ProcessOutParser(reader, stats)).start();
 				
 			int exit = pro.waitFor();
 			System.out.println("Finished with "+ exit);
@@ -259,5 +241,72 @@ public class VideoFormatter {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+}
+
+
+class VideoStats{
+	String fps=null;
+	String bitrate=null;
+	String playTime=null;
+	
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return "Parsed -> Time: " + playTime +
+                " | Bitrate: " + bitrate +
+                " | FPS: " + fps;
+	}
+}
+
+class ProcessOutParser implements Runnable{
+	// TODO Auto-generated method stub
+    String line;
+    BufferedReader reader;
+    VideoStats stats;
+    
+	public ProcessOutParser(BufferedReader reader, VideoStats stats) {
+		super();
+		this.reader = reader;
+		this.stats = stats;
+	}
+	
+	@Override
+	public void run() {
+	    try {
+	        while ((line = reader.readLine()) != null) {
+
+	            if (!line.contains("=")) continue;
+
+	            String[] parts = line.split("=", 2);
+	            String key = parts[0];
+	            String value = parts[1].trim();
+
+	            switch (key) {
+	                case "fps":
+	                    
+	                      stats.fps = value;
+	                    
+	                    break;
+
+	                case "bitrate":
+	                	stats.bitrate=value;
+	                    break;
+
+	                case "out_time":
+	                    stats.playTime = value;
+	                    break;
+
+	                case "progress":
+	                    if (value.equals("continue")) {
+	                        // one full update received
+	                        System.out.println(stats.toString());
+	                    }
+	                    break;
+	            }
+	        }
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	    }
 	}
 }

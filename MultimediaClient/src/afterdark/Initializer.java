@@ -22,6 +22,7 @@ public class Initializer {
 	private static int loadBalancerPort=5000;
 	
 	private static int serverPort; 
+	private static String ip;
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
@@ -36,6 +37,19 @@ public class Initializer {
 			}
 		}
 		
+		checkDownloadDir();
+		
+		communicateWithLoadBalancer();
+ 		
+		SwingUtilities.invokeLater(() -> {
+			IClientUi ui =  new MainWindow();
+			ClientConnect controller = new ClientConnect(ui,ip,serverPort);
+			((MainWindow) ui).setController(controller);
+			ui.start();
+		});
+	}
+
+	private static void checkDownloadDir() {
 		//check if there is the systemdownload directory if not make it. 
 		Path downloadPath = Paths.get(System.getProperty("user.home")+"/Ice-multimedia");
 		if(!Files.exists(downloadPath)) {
@@ -47,7 +61,9 @@ public class Initializer {
 				e.printStackTrace();
 			}
 		}
-		
+	}
+	
+	private static void communicateWithLoadBalancer() {
 		//then we first communicate with the load balancer
 		try {
 			Socket s= new Socket(loadBalancerIp,loadBalancerPort);
@@ -64,9 +80,13 @@ public class Initializer {
 				throw new Exception("load balancer did not respond");
 			}
 			
-			serverPort = Integer.parseInt(in.readLine());
+			String response = in.readLine();
 			
-			System.out.println("I was added to "+serverPort);
+			System.out.println("Client connects to : "+response);
+			
+			String[] parts = response.split(":");
+			ip = parts[0];
+			serverPort = Integer.parseInt(parts[1]);
 			
 			in.close();
 			out.close();
@@ -81,15 +101,5 @@ public class Initializer {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
- 		
-		SwingUtilities.invokeLater(() -> {
-			IClientUi ui =  new MainWindow();
-			ClientConnect controller = new ClientConnect(ui);
-			((MainWindow) ui).setController(controller);
-			ui.start(serverPort);
-		});
 	}
-
 }

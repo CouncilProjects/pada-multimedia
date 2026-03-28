@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -33,7 +34,55 @@ public class Server implements Runnable {
 		this.myId=id;
 		this.myPort = port;
 	}
-
+	
+	
+	@Override
+	public void run() {
+		try {
+			this.serverSocket = new ServerSocket(myPort);
+			
+			//if OK inform the load balancer
+			registerLoadBalancer();
+			System.out.println("Server : "+myId+"done registering to load balancer");
+			
+			//if i registerd at the load balancer start 
+			this.startServer();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	// DURING run the server will first register with the load balancer
+	private void registerLoadBalancer() {
+		try {
+			Socket s= new Socket(loadBalancerIp,loadBalancerPort);
+			PrintWriter out = new PrintWriter(s.getOutputStream(),true);
+			BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+			
+			out.println("server|register|"+InetAddress.getLocalHost().getHostAddress()+":"+myPort);
+			
+			if(!in.readLine().equals("register-done")) {
+				in.close();
+				out.close();
+				s.close();
+				throw new Exception("load balancer did not respond");
+			}
+			in.close();
+			out.close();
+			s.close();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public void startServer() throws Exception {
 		try {
 			System.out.println("Server "+myId+" is active");
@@ -60,50 +109,6 @@ public class Server implements Runnable {
 	}
 	
 	
-	// DURING run the server will first register with the load balancer
-	@Override
-	public void run() {
-		try {
-			this.serverSocket = new ServerSocket(myPort);
-			System.out.println("Server : "+myId+"got socket and will try to register");
-			//if OK inform the load balancer
-			registerLoadBalancer();
-			System.out.println("Server : "+myId+"done registering");
-			
-			//if i registerd at the load balancer start 
-			this.startServer();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	private void registerLoadBalancer() {
-		try {
-			Socket s= new Socket(loadBalancerIp,loadBalancerPort);
-			PrintWriter out = new PrintWriter(s.getOutputStream(),true);
-			BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-			out.println("server|register|"+myPort);
-			
-			if(!in.readLine().equals("register-done")) {
-				in.close();
-				out.close();
-				s.close();
-				throw new Exception("load balancer did not respond");
-			}
-			in.close();
-			out.close();
-			s.close();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+
 	
 }

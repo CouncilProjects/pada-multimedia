@@ -4,7 +4,7 @@ import java.awt.event.ActionListener;
 
 //this interface, will be implemented by the swing window and will be used so that the client connector can inform the ui about state
 public interface IClientUi {
-	void start(int port);
+	void start();
 	
 	void signalClose();
 	

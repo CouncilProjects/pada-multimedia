@@ -15,7 +15,7 @@ import java.util.List;
 // the load balancer will always be oparating at port 5000
 public class LoadBalancer implements Runnable{
 	ServerSocket socket=null;
-	List<String> availablePorts = new ArrayList<String>();
+	List<String> availableAddresses = new ArrayList<String>();
 	private int roundRobinIndex = 0;
 	
 	
@@ -29,14 +29,13 @@ public class LoadBalancer implements Runnable{
 	}
 	
 	private void startBalancing(){
-		System.out.println("BALANCER ACTIVE");
+		System.out.println("LOAD BALANCER ACTIVE");
 		Socket sock = null;
 		PrintWriter out = null;
 		BufferedReader in = null;
 		while(true) {
 			try {
 				sock = this.socket.accept();
-				System.out.println("Connection");
 				out = new PrintWriter(sock.getOutputStream(),true);
 				in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 				
@@ -46,14 +45,13 @@ public class LoadBalancer implements Runnable{
 				
 				if(request[0].equals("server")) {
 					if(request[1].equals("register")) { // i made contain a command part incase i need the LB to do extra stuff in the future
-						availablePorts.add(request[2]);
-						System.out.println("[LOAD BALANCER] registers port "+request[2]);
+						availableAddresses.add(request[2]);
+						System.out.println("[LOAD BALANCER] registers address "+request[2]);
 						sendMessage(out, "register-done", null);
 					}
 				} else if(request[0].equals("cli")) {
-					System.out.println("[LOAD BALANCER] cli req "+request[1]);
 					if(request[1].equals("give-server")) {
-						sendMessage(out, "get-server",nextServerPort() );
+						sendMessage(out, "get-server",nextServerAddress() );
 					}	
 				}
 			} catch (IOException e) {
@@ -79,13 +77,13 @@ public class LoadBalancer implements Runnable{
 		out.println(data);
 	}
 	
-	private String nextServerPort() {
-        if (availablePorts == null || availablePorts.isEmpty()) {
+	private String nextServerAddress() {
+        if (availableAddresses == null || availableAddresses.isEmpty()) {
             return null;
         }
 
-        String value = availablePorts.get(roundRobinIndex);
-        roundRobinIndex = (roundRobinIndex + 1) % availablePorts.size();
+        String value = availableAddresses.get(roundRobinIndex);
+        roundRobinIndex = (roundRobinIndex + 1) % availableAddresses.size();
         return value;
     }
 

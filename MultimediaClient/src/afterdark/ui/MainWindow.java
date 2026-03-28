@@ -41,7 +41,8 @@ public class MainWindow extends JFrame implements IClientUi{
 	
 	public MainWindow() {
 		setTitle("ICE media-player");
-		setSize(300,400);
+		setSize(400,600);
+		setResizable(false);
 		
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		addWindowListener(new WindowAdapter() {
@@ -103,9 +104,9 @@ public class MainWindow extends JFrame implements IClientUi{
 	}
 	
 	@Override
-	public void start(int port) {
+	public void start() {
 		try {
-			controller.startConnection("127.0.0.1", port);
+			controller.startConnection();
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
