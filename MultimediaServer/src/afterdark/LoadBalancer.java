@@ -3,17 +3,20 @@ package afterdark;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
+import afterdark.Initializer;
 
 
 
 // the load balancer will always be oparating at port 5000
 public class LoadBalancer implements Runnable{
+	Logger log = Logger.getLogger(LoadBalancer.class.getName());
+
 	ServerSocket socket=null;
 	List<String> availableAddresses = new ArrayList<String>();
 	private int roundRobinIndex = 0;
@@ -29,7 +32,7 @@ public class LoadBalancer implements Runnable{
 	}
 	
 	private void startBalancing(){
-		System.out.println("LOAD BALANCER ACTIVE");
+		log.info("LOAD BALANCER ACTIVE");
 		Socket sock = null;
 		PrintWriter out = null;
 		BufferedReader in = null;
@@ -40,13 +43,13 @@ public class LoadBalancer implements Runnable{
 				in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 				
 				String input = in.readLine();
-				System.out.println(input);
+
 				String[] request = input.split("\\|"); //Assume origin|command|data
 				
 				if(request[0].equals("server")) {
 					if(request[1].equals("register")) { // i made contain a command part incase i need the LB to do extra stuff in the future
 						availableAddresses.add(request[2]);
-						System.out.println("[LOAD BALANCER] registers address "+request[2]);
+						log.info("Registered address "+request[2]);
 						sendMessage(out, "register-done", null);
 					}
 				} else if(request[0].equals("cli")) {
@@ -90,6 +93,7 @@ public class LoadBalancer implements Runnable{
 	@Override
 	public void run() {
 		// TODO Auto-generated method stub
+		Initializer.addLogHandler(log);
 		this.startBalancing();
 	}
 }

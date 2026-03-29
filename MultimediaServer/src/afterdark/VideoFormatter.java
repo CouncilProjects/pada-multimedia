@@ -13,14 +13,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
+import com.github.kokorin.jaffree.LogLevel;
 import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
 import com.github.kokorin.jaffree.ffmpeg.UrlInput;
 import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
+import com.github.kokorin.jaffree.ffprobe.FFprobe;
 
 public class VideoFormatter {
 	// where to look for videos
 	private String pathToVideoFile;
+	Logger log = Logger.getLogger(VideoFormatter.class.getName());
+	
 	
 	//the foramts and resolutions we want
 	private static String[] formats = {"avi","mp4","mkv"};
@@ -38,6 +43,7 @@ public class VideoFormatter {
 
 
 	public VideoFormatter(String workpath) {
+		Initializer.addLogHandler(log);
 		pathToVideoFile = workpath;
 		
 		// initialize public-video-list
@@ -79,14 +85,43 @@ public class VideoFormatter {
 		
 		
 		for(File file : videoFiles) {
-			String[] parts = file.getName().split("[-.]");
-			//Assume format where the only - is infornt of the quality and only one . exists
-			if(parts.length!=3) {
-				continue;
-			}
+			int dash = file.getName().lastIndexOf('-');
+			int dot = file.getName().lastIndexOf('.');
+
+			if(dash==-1 || dot==-1 || dash>dot) continue;
+
+			String name = file.getName().substring(0, dash==-1?dot:dash);
+			System.out.println(name);
 			
-			if(!pairsHighestQuality.containsKey(parts[0]) || isHigher(pairsHighestQuality.get(parts[0]).getFirst(), parts[1])) {
-				pairsHighestQuality.put(parts[0], List.of(parts[1],parts[2]));
+			String extention = file.getName().substring(dot + 1);
+			
+			int height = FFprobe.atPath()
+			        .setShowStreams(true)
+			        .setInput(file.getAbsolutePath())
+			        .execute()
+			        .getStreams()
+			        .stream()
+			        .filter(s -> s.getHeight() > 0)
+			        .mapToInt(s -> s.getHeight())
+			        .findFirst()
+			        .orElse(-1);
+			
+			System.out.println(height);
+
+			if (height == -1) continue;
+			if(height>1080) height=1080;
+
+			String quality = height + "p";  // later we will be using semantics
+
+			
+			try {
+				if(!pairsHighestQuality.containsKey(name) || isHigher(pairsHighestQuality.get(name).getFirst(), quality)) {
+					pairsHighestQuality.put(name, List.of(quality,extention));
+				}
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				log.info("Bad video. Skipping");
 			}
 		}
 		
@@ -105,16 +140,20 @@ public class VideoFormatter {
 					if(videoNames.contains(candidateName)) {
 						existingVids++;
 					} else {
-						System.out.println("Making : "+candidateName);
+						log.info("Making : "+candidateName);
 						// we made jaffree do ffmpeg commands
 						Path videoOut = Paths.get(pathToVideoFile+"/"+candidateName);
 						int targetHeight = resolutions.get(resolutionKey);
 						 
 						try {
+							log.info(videoSrc+" "+videoOut+" "+targetHeight+" "+format);
 							FFmpeg.atPath()
+							.setLogLevel(LogLevel.DEBUG)
 							.addInput(UrlInput.fromPath(videoSrc))
 							.addOutput(UrlOutput.toPath(videoOut)
 									.addArguments("-vf", "scale=-2:" + targetHeight) // width=-2 keeps aspect ratio
+									.addArguments("-c:v", "libx264")
+									.addArguments("-c:a", "copy")
 									.setFormat(format.equalsIgnoreCase("mkv") ? "matroska" : format) // for some reason doing format .mkv wont work and needs the matroska key
 							)
 							.execute();
@@ -135,7 +174,7 @@ public class VideoFormatter {
 				}
 			}
 		}
-		System.out.println("[VIDEO HANDLER] Created missing videos pre-existing videos "+existingVids);
+		log.info("[VIDEO HANDLER] Created missing videos pre-existing videos "+existingVids);
 	}
 	
 	private boolean isHigher(String current, String candidate) {
@@ -176,7 +215,6 @@ public class VideoFormatter {
 	// here the process builder will do an ffmpeg coomand
 	//https://trac.ffmpeg.org/wiki/StreamingGuide#Pointtopointstreaming
 	public void streamVid(String vid,String proto,String port,String address) {
-		System.out.println("{SERVER} : will try to stream to port : "+port);
 		VideoStats stats = new VideoStats();
 		try {
 			ProcessBuilder process = new ProcessBuilder(
@@ -200,7 +238,7 @@ public class VideoFormatter {
 			new Thread(new ProcessOutParser(reader, stats)).start();
 				
 			int exit = pro.waitFor();
-			System.out.println("Finished with "+ exit);
+			log.info(vid+" "+stats.toString());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -212,13 +250,13 @@ public class VideoFormatter {
 	
 	
 	public void cliDownload(String vid,String proto,String port,String address) {
-		System.out.println("{SERVER} : will let client download at : "+address+":"+port);
 		VideoStats stats = new VideoStats(); //will help when logging
 		try {
 			ProcessBuilder process = new ProcessBuilder(
 					"ffmpeg",
 					"-i",
 					pathToVideoFile+"/"+vid,
+					"-progress","pipe:1", //https://ffmpeg.org/ffmpeg.html#toc-Main-options 
 					"-f",
 					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
 					proto+"://"+address+":"+port
@@ -233,7 +271,7 @@ public class VideoFormatter {
 			new Thread(new ProcessOutParser(reader, stats)).start();
 				
 			int exit = pro.waitFor();
-			System.out.println("Finished with "+ exit);
+			log.info(vid+" "+stats.toString());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -253,9 +291,17 @@ class VideoStats{
 	@Override
 	public String toString() {
 		// TODO Auto-generated method stub
-		return "Parsed -> Time: " + playTime +
-                " | Bitrate: " + bitrate +
-                " | FPS: " + fps;
+		return "Time: " + replaceNull(playTime) +
+                " | Bitrate: " + replaceNull(bitrate) +
+                " | FPS: " + replaceNull(fps);
+	}
+	
+	private String replaceNull(String in) {
+		if(in!=null) {
+			return in;
+		} else {
+			return "Unrelated";
+		}
 	}
 }
 

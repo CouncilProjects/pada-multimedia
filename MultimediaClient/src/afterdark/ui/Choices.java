@@ -93,7 +93,7 @@ public class Choices extends JPanel {
 		protocolComboBox.setBackground(new Color(94, 92, 100));
 		protocolComboBox.setForeground(new Color(248, 228, 92));
 		panel.add(protocolComboBox);
-		protocolComboBox.setModel(new DefaultComboBoxModel(new String[] {"TCP","UDP",  "RTP"}));
+		protocolComboBox.setModel(new DefaultComboBoxModel(new String[] {"AUTO","TCP","UDP","RTP"}));
 		protocolComboBox.setBorder(new EmptyBorder(10, 30, 0, 30));
 		protocolComboBox.setMaximumRowCount(3);
 		protocolComboBox.setVisible(videos.length>0);

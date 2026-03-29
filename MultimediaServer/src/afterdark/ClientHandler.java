@@ -9,14 +9,20 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 
 public class ClientHandler extends Thread {
+	Logger log = Logger.getLogger(ClientHandler.class.getName());
+	
 	private Socket clientSocket;
 	private PrintWriter out;
     private BufferedReader in;
+    private long timeConnected;
     
 	private VideoFormatter videoHandle;
+	
+	
 
     private String serverId;
     private String clientAddress;
@@ -26,6 +32,8 @@ public class ClientHandler extends Thread {
     String latestfreePort;
 	
 	public ClientHandler(Socket sock,VideoFormatter vidHandle,String serv) {
+		Initializer.addLogHandler(log);
+		
 		clientSocket = sock;
 		videoHandle = vidHandle;
 		this.serverId = serv;
@@ -42,6 +50,8 @@ public class ClientHandler extends Thread {
 			in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			sendMessage("get-id", serverId); //give the server id to the client.
 			clientAddress = clientSocket.getLocalAddress().getHostAddress();
+			log.info("Client "+clientAddress+" connected to server : "+serverId);
+			timeConnected = System.currentTimeMillis();
 		} catch (IOException e) {
 			System.err.println("Failed to get streams");
 			e.printStackTrace();
@@ -71,8 +81,11 @@ public class ClientHandler extends Thread {
 	}
 	
 	private void handleClosing() throws IOException {
-		System.out.println("Closing client connection");
+		long durationSec = (System.currentTimeMillis() - timeConnected)/1000;
+		
+		
 		sendMessage("close", "");
+		log.info("Client "+clientSocket.getInetAddress().getHostAddress()+" disconnected from server : "+serverId+" after "+durationSec+" seconds");
 		clientSocket.close();
 	}
 	
@@ -85,6 +98,16 @@ public class ClientHandler extends Thread {
 	private void handleVideoRequest() throws IOException {
 		String[] data = in.readLine().split("\\|");
 		System.out.println(data[0]);
+		String proto = data[0];
+		if(data[0].equalsIgnoreCase("auto")) {
+			if(data[1].contains("240")) {
+				proto="tcp";
+			} else if(data[1].contains("360") || data[1].contains("480")) {
+				proto="udp";
+			} else {
+				proto="udp";
+			}
+		}
 		
 		//https://stackoverflow.com/questions/2675362/how-to-find-an-available-port
 		//https://www.baeldung.com/java-free-port
@@ -92,9 +115,9 @@ public class ClientHandler extends Thread {
 		int freeport = nextFreeSocket.getLocalPort();
 		nextFreeSocket.close();
 		latestfreePort = String.valueOf(freeport);
-		reserved.baseSetup(data[1], data[0].toLowerCase(), latestfreePort,data[2]);
+		reserved.baseSetup(data[1], proto.toLowerCase(), latestfreePort,data[2]);
 			
-		sendMessage("get-port", latestfreePort); // the next step is most likely that the client will send a ready command	
+		sendMessage("get-stream-info", latestfreePort+"|"+proto.toLowerCase()); // the next step is most likely that the client will send a ready command	
 	}
 	
 	private void letFfmpeghandle(String vid,String proto,String port,String action) {

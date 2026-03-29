@@ -108,11 +108,11 @@ public class ClientConnect {
     	String[] respReq;
     	ProcessBuilder processBuild = null;
 		try {
-			if((respReq = sendMessage("video-req", action.getProto()+"|"+action.getVideo()+"|"+action.getAction()))[0].equals("get-port")) {
+			if((respReq = sendMessage("video-req", action.getProto()+"|"+action.getVideo()+"|"+action.getAction()))[0].equals("get-stream-info")) {
 				uiLayer.loadingVid("Loading "+action.getVideo());
-				String portRespo = respReq[1];
+				String[] respo = respReq[1].split("\\|");
 				
-				processBuild = createProcessBuild(action, portRespo); 
+				processBuild = createProcessBuild(action, respo); 
 				
 				
 				processBuild.redirectErrorStream(true);
@@ -181,7 +181,7 @@ public class ClientConnect {
     }
     
     
-    private ProcessBuilder createProcessBuild(VideoAction action,String videoPort) {
+    private ProcessBuilder createProcessBuild(VideoAction action,String[] streamInfo) {
     	if(action.getAction().equals("down")) {
 			//About the command. 
     		// We want the windo to exit when the video gets downloaded
@@ -191,7 +191,7 @@ public class ClientConnect {
 					"-timeout",
 					"3000000",
 					"-i",
-					action.getProto().toLowerCase()+"://"+serverIp+":"+videoPort+"?listen",
+					streamInfo[1]+"://"+serverIp+":"+streamInfo[0]+"?listen",
 					downPath+"/"+action.getVideo(),
 					"-y"
 					
@@ -211,7 +211,7 @@ public class ClientConnect {
 					"3000000",
 					"-window_title", "ICE media streaming", //ffplay opens a new window but we can control the title
 					"-i",
-					action.getProto().toLowerCase()+"://"+serverIp+":"+videoPort+"?listen"
+					streamInfo[1]+"://"+serverIp+":"+streamInfo[0]+"?listen"
 			);
     	} else {
     		return null;

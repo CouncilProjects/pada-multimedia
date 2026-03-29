@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.logging.Logger;
 
 
 
@@ -16,6 +17,7 @@ public class Server implements Runnable {
 	//Some static settings
 	private static String loadBalancerIp="127.0.0.1";
 	private static int loadBalancerPort=5000;
+	Logger log = Logger.getLogger(Server.class.getName());
 	
 	
 	private ServerSocket serverSocket;
@@ -33,6 +35,7 @@ public class Server implements Runnable {
 		this.videoHandler = videoHandler;
 		this.myId=id;
 		this.myPort = port;
+		Initializer.addLogHandler(log);
 	}
 	
 	
@@ -43,7 +46,6 @@ public class Server implements Runnable {
 			
 			//if OK inform the load balancer
 			registerLoadBalancer();
-			System.out.println("Server : "+myId+"done registering to load balancer");
 			
 			//if i registerd at the load balancer start 
 			this.startServer();
@@ -85,7 +87,7 @@ public class Server implements Runnable {
 	
 	public void startServer() throws Exception {
 		try {
-			System.out.println("Server "+myId+" is active");
+			log.info("Server "+myId+" is active");
 			while(running) {
 				// the server will be accepting clients, and assigning them to threads
 				new ClientHandler(serverSocket.accept(),videoHandler,myId).start();
