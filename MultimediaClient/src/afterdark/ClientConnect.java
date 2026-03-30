@@ -136,12 +136,6 @@ public class ClientConnect {
 						e.printStackTrace();
 					}
 				}).start();
-				
-				//give prep time before leting server send the data
-				Thread.sleep(500);
-				
-				//inform server
-				out.println("cli-ready");
 
 				new Thread(() -> {
 				    try {
@@ -186,12 +180,23 @@ public class ClientConnect {
 			//About the command. 
     		// We want the windo to exit when the video gets downloaded
     		//(udp does not have a "stop" flag because its connectionless so we set a timeout so it stops after 3 sec of no data
+    		
+    		if(streamInfo[1].equals("tcp")) {
+    			try {
+					Thread.sleep(300);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+    		}
+    		
 			return new ProcessBuilder(
 					"ffmpeg",
 					"-timeout",
 					"3000000",
 					"-i",
-					streamInfo[1]+"://"+serverIp+":"+streamInfo[0]+"?listen",
+					streamInfo[1]+"://"+serverIp+":"+streamInfo[0],
+					"-c","copy",
 					downPath+"/"+action.getVideo(),
 					"-y"
 					
@@ -205,13 +210,13 @@ public class ClientConnect {
     		return new ProcessBuilder(
 					"ffplay",
 					"-autoexit",  //https://ffmpeg.org/ffplay.html#toc-Advanced-options 
-					"-rw_timeout",
+					"-timeout",
 					"3000000",
 					"-seek_interval", //https://ffmpeg.org/ffplay.html#toc-While-playing
 					"3000000",
 					"-window_title", "ICE media streaming", //ffplay opens a new window but we can control the title
 					"-i",
-					streamInfo[1]+"://"+serverIp+":"+streamInfo[0]+"?listen"
+					streamInfo[1]+"://"+serverIp+":"+streamInfo[0]
 			);
     	} else {
     		return null;

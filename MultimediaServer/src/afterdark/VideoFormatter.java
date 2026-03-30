@@ -91,7 +91,6 @@ public class VideoFormatter {
 			if(dash==-1 || dot==-1 || dash>dot) continue;
 
 			String name = file.getName().substring(0, dash==-1?dot:dash);
-			System.out.println(name);
 			
 			String extention = file.getName().substring(dot + 1);
 			
@@ -105,8 +104,6 @@ public class VideoFormatter {
 			        .mapToInt(s -> s.getHeight())
 			        .findFirst()
 			        .orElse(-1);
-			
-			System.out.println(height);
 
 			if (height == -1) continue;
 			if(height>1080) height=1080;
@@ -146,7 +143,6 @@ public class VideoFormatter {
 						int targetHeight = resolutions.get(resolutionKey);
 						 
 						try {
-							log.info(videoSrc+" "+videoOut+" "+targetHeight+" "+format);
 							FFmpeg.atPath()
 							.setLogLevel(LogLevel.DEBUG)
 							.addInput(UrlInput.fromPath(videoSrc))
@@ -174,7 +170,7 @@ public class VideoFormatter {
 				}
 			}
 		}
-		log.info("[VIDEO HANDLER] Created missing videos pre-existing videos "+existingVids);
+		log.info("[VIDEO HANDLER] Created missing videos. [pre-existing videos "+existingVids+"]");
 	}
 	
 	private boolean isHigher(String current, String candidate) {
@@ -225,8 +221,8 @@ public class VideoFormatter {
 					"-progress","pipe:1", //https://ffmpeg.org/ffmpeg.html#toc-Main-options 
 					"-c:v", "libx264", "-c:a", "aac",
 					"-f",
-					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
-							proto+"://"+address+":"+port
+					proto.equalsIgnoreCase("rtp") ? "rtp_mpegts" : "mpegts",
+							proto+"://"+address+":"+port+"?listen"
 					);
 			process.redirectErrorStream(true);
 			Process pro = process.start();
@@ -251,15 +247,18 @@ public class VideoFormatter {
 	
 	public void cliDownload(String vid,String proto,String port,String address) {
 		VideoStats stats = new VideoStats(); //will help when logging
+
 		try {
 			ProcessBuilder process = new ProcessBuilder(
 					"ffmpeg",
 					"-i",
 					pathToVideoFile+"/"+vid,
 					"-progress","pipe:1", //https://ffmpeg.org/ffmpeg.html#toc-Main-options 
+					"-c:v", "copy",
+					"-c:a", "copy", // we dont want to re-encode for download
 					"-f",
-					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
-					proto+"://"+address+":"+port
+					proto.equalsIgnoreCase("rtp") ? "rtp_mpegts" : "mpegts",
+					proto+"://"+address+":"+port+"?listen"
 				);
 			process.redirectErrorStream(true);
 			Process pro = process.start();

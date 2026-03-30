@@ -115,9 +115,9 @@ public class ClientHandler extends Thread {
 		int freeport = nextFreeSocket.getLocalPort();
 		nextFreeSocket.close();
 		latestfreePort = String.valueOf(freeport);
-		reserved.baseSetup(data[1], proto.toLowerCase(), latestfreePort,data[2]);
-			
-		sendMessage("get-stream-info", latestfreePort+"|"+proto.toLowerCase()); // the next step is most likely that the client will send a ready command	
+		sendMessage("get-stream-info", latestfreePort+"|"+proto.toLowerCase()); // the next step is most likely that the client will send a ready command
+		letFfmpeghandle(data[1], proto.toLowerCase(),latestfreePort,data[2]);
+		
 	}
 	
 	private void letFfmpeghandle(String vid,String proto,String port,String action) {
