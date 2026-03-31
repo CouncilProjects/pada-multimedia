@@ -3,9 +3,12 @@ package afterdark;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import javax.swing.SwingUtilities;
 
@@ -110,9 +113,24 @@ public class ClientConnect {
 		try {
 			if((respReq = sendMessage("video-req", action.getProto()+"|"+action.getVideo()+"|"+action.getAction()))[0].equals("get-stream-info")) {
 				uiLayer.loadingVid("Loading "+action.getVideo());
+				System.out.println(respReq[1]);
 				String[] respo = respReq[1].split("\\|");
+				String sdp = null;
+				processBuild = createProcessBuild(action, respo);
 				
-				processBuild = createProcessBuild(action, respo); 
+				if(respo[0].equals("rtp")) {
+	    			StringBuilder sdpRecreation = new StringBuilder();
+	    			
+	    			for(int i=1;i<respo.length;i++) {
+	    				if(respo[i].equals("END")) break;
+	    				sdpRecreation.append(respo[i]).append("\n");
+	    				System.out.println(respo[i]);
+	    			}
+	    			sdp = sdpRecreation.toString();
+	    			Files.writeString(Path.of("/tmp/stream.sdp"), sdp);
+	    		}
+				
+				
 				
 				
 				processBuild.redirectErrorStream(true);
@@ -181,7 +199,9 @@ public class ClientConnect {
     		// We want the windo to exit when the video gets downloaded
     		//(udp does not have a "stop" flag because its connectionless so we set a timeout so it stops after 3 sec of no data
     		
-    		if(streamInfo[1].equals("tcp")) {
+    		
+    		
+    		if(streamInfo[0].equals("tcp") || streamInfo[0].equals("rtp")) {
     			try {
 					Thread.sleep(300);
 				} catch (InterruptedException e) {
@@ -195,7 +215,7 @@ public class ClientConnect {
 					"-timeout",
 					"3000000",
 					"-i",
-					streamInfo[1]+"://"+serverIp+":"+streamInfo[0],
+					streamInfo[0]+"://"+serverIp+":"+streamInfo[1],
 					"-c","copy",
 					downPath+"/"+action.getVideo(),
 					"-y"
@@ -207,16 +227,25 @@ public class ClientConnect {
     		//(udp does not have a "stop" flag because its connectionless so we set a timeout so it stops after 3 sec of no data
     		//We also allow the user to use left and right buttons to go 3sec forward or backward using -seekinterval
     		//To also let the user know that the window that oppend is ours we set its title with window_title
+    		if(streamInfo[0].equals("rtp")) {
+    			return  new ProcessBuilder(
+    	                "ffplay",
+    	                "-fflags","nobuffer","-flags","low_delay","-framedrop",
+    	                "-protocol_whitelist", "file,udp,rtp,fd",
+    	                "-bufsize","512k",
+    	                "-i", "/tmp/stream.sdp"   // read SDP from stdin
+    	        );
+    		}
     		return new ProcessBuilder(
 					"ffplay",
 					"-autoexit",  //https://ffmpeg.org/ffplay.html#toc-Advanced-options 
 					"-timeout",
-					"3000000",
+					"30000000",
 					"-seek_interval", //https://ffmpeg.org/ffplay.html#toc-While-playing
 					"3000000",
 					"-window_title", "ICE media streaming", //ffplay opens a new window but we can control the title
 					"-i",
-					streamInfo[1]+"://"+serverIp+":"+streamInfo[0]
+					streamInfo[0]+"://"+serverIp+":"+streamInfo[1]
 			);
     	} else {
     		return null;

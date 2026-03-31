@@ -115,16 +115,24 @@ public class ClientHandler extends Thread {
 		int freeport = nextFreeSocket.getLocalPort();
 		nextFreeSocket.close();
 		latestfreePort = String.valueOf(freeport);
-		sendMessage("get-stream-info", latestfreePort+"|"+proto.toLowerCase()); // the next step is most likely that the client will send a ready command
 		letFfmpeghandle(data[1], proto.toLowerCase(),latestfreePort,data[2]);
-		
+		log.info("Calling letFFmpegHanlde");
 	}
 	
 	private void letFfmpeghandle(String vid,String proto,String port,String action) {
+
+		if(proto.equalsIgnoreCase("rtp")) {
+			String file = videoHandle.prepareSDP(vid, port, clientAddress,action);
+			sendMessage("get-stream-info", "rtp|"+file);
+		} else {
+			
+			sendMessage("get-stream-info", action.equals("play") ? proto:"tcp"+"|"+port);
+		}
+		
 		if(action.equals("play")) {
 			videoHandle.streamVid(vid,proto,port,clientAddress);
 		} else {
-			videoHandle.cliDownload(vid, proto, port,clientAddress);
+			videoHandle.cliDownload(vid, "tcp", port,clientAddress);
 		}
 		
 	}

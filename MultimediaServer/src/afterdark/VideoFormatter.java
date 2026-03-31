@@ -212,16 +212,18 @@ public class VideoFormatter {
 	//https://trac.ffmpeg.org/wiki/StreamingGuide#Pointtopointstreaming
 	public void streamVid(String vid,String proto,String port,String address) {
 		VideoStats stats = new VideoStats();
+		
 		try {
 			ProcessBuilder process = new ProcessBuilder(
 					"ffmpeg",
 					"-re", //needed for streaming or else ffmpeg will move too fast https://trac.ffmpeg.org/wiki/StreamingGuide#The-reflag
+					
 					"-i",
 					pathToVideoFile+"/"+vid,
 					"-progress","pipe:1", //https://ffmpeg.org/ffmpeg.html#toc-Main-options 
 					"-c:v", "libx264", "-c:a", "aac",
 					"-f",
-					proto.equalsIgnoreCase("rtp") ? "rtp_mpegts" : "mpegts",
+					proto.equalsIgnoreCase("rtp") ? "rtp" : "mpegts",
 							proto+"://"+address+":"+port+"?listen"
 					);
 			process.redirectErrorStream(true);
@@ -238,10 +240,63 @@ public class VideoFormatter {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			log.info("BADDD");
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	public String prepareSDP(String vid,String port,String address,String action) {
+		ProcessBuilder process;
+		try {
+			if(action.equals("play")) {
+				process = new ProcessBuilder(
+						"ffmpeg",
+						"-re", //needed for streaming or else ffmpeg will move too fast https://trac.ffmpeg.org/wiki/StreamingGuide#The-reflag
+						"-i",
+						pathToVideoFile+"/"+vid,
+						"-c:v", "libx264", "-c:a", "aac",
+						"-sdp_file","pipe:1",
+						"-loglevel","quiet",
+						"-f","rtp",
+						"rtp://"+address+":"+port
+						);
+			} else {
+				process = new ProcessBuilder(
+						"ffmpeg",
+						"-i",
+						pathToVideoFile+"/"+vid,
+						"-c:v", "copy",
+						"-c:a", "copy",
+						"-sdp_file","pipe:1",
+						"-loglevel","quiet",
+						"-f","rtp",
+						"rtp://"+address+":"+port
+						);
+			}
+			Process pro = process.start();
+			
+			BufferedReader reader = new BufferedReader(
+				    new InputStreamReader(pro.getInputStream())
+				);
+			String line;
+			String output="";
+			while(( line = reader.readLine())!=null) {
+				output+=line+"|";
+				if(line.contains("packetization-mode")) {
+					break;
+				}
+			}
+			
+			pro.destroy();
+			return output+"END";
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	
