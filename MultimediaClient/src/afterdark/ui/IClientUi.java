@@ -18,5 +18,7 @@ public interface IClientUi {
 	
 	void loadingVid(String message);
 	
+	void loadingVidError(String messageError);
+	
 	void doneLoading();
 }

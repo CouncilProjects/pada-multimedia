@@ -67,10 +67,6 @@ public class ClientHandler extends Thread {
 					handleListgen();
 				} else if(command.equals("video-req")) {
 					handleVideoRequest();
-				} else if(command.equals("cli-ready")) { //when the client is ready clear the pending request data and let ffmpgeg do its job
-					List<String> info = reserved.getData();
-					reserved.baseSetup(null, null,null,null);
-					letFfmpeghandle(info.get(0), info.get(1),info.get(2),info.get(3));
 				}
 			}
 		} catch (Exception e) {
@@ -116,24 +112,34 @@ public class ClientHandler extends Thread {
 		nextFreeSocket.close();
 		latestfreePort = String.valueOf(freeport);
 		letFfmpeghandle(data[1], proto.toLowerCase(),latestfreePort,data[2]);
-		log.info("Calling letFFmpegHanlde");
 	}
 	
 	private void letFfmpeghandle(String vid,String proto,String port,String action) {
-
-		if(proto.equalsIgnoreCase("rtp")) {
-			String file = videoHandle.prepareSDP(vid, port, clientAddress,action);
-			sendMessage("get-stream-info", "rtp|"+file);
-		} else {
-			
-			sendMessage("get-stream-info", action.equals("play") ? proto:"tcp"+"|"+port);
+		
+		//For download we shall do TCP only.
+		if(action.equalsIgnoreCase("down")){
+			sendMessage("get-stream-info","tcp"+"|"+port);
+			videoHandle.cliDownload(vid, "tcp", port,clientAddress);
+			return;
 		}
 		
-		if(action.equals("play")) {
-			videoHandle.streamVid(vid,proto,port,clientAddress);
+
+		if(proto.equalsIgnoreCase("rtp")) {
+			//this will make an sdp file, needed for rtp
+			String file = videoHandle.prepareSDP(vid, port, clientAddress,action);
+			sendMessage("get-stream-info", "rtp|"+file);
+			try {
+				Thread.sleep(300);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		} else {
-			videoHandle.cliDownload(vid, "tcp", port,clientAddress);
+			sendMessage("get-stream-info", proto+"|"+port);
 		}
+		videoHandle.streamVid(vid,proto,port,clientAddress);
+		
+
 		
 	}
 }

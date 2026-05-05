@@ -3,7 +3,6 @@ package afterdark;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -115,6 +114,7 @@ public class ClientConnect {
 				uiLayer.loadingVid("Loading "+action.getVideo());
 				System.out.println(respReq[1]);
 				String[] respo = respReq[1].split("\\|");
+				System.out.println(respReq[1]);
 				String sdp = null;
 				processBuild = createProcessBuild(action, respo);
 				
@@ -123,7 +123,12 @@ public class ClientConnect {
 	    			
 	    			for(int i=1;i<respo.length;i++) {
 	    				if(respo[i].equals("END")) break;
-	    				sdpRecreation.append(respo[i]).append("\n");
+	    				if(respo[i].contains("s=")) {
+	    					sdpRecreation.append("s=Ice Media Streaming").append("\n");
+	    				} else {
+	    					sdpRecreation.append(respo[i]).append("\n");
+	    				}
+	    				
 	    				System.out.println(respo[i]);
 	    			}
 	    			sdp = sdpRecreation.toString();
@@ -151,7 +156,7 @@ public class ClientConnect {
 						}
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						uiLayer.loadingVidError(e.getMessage());
 					}
 				}).start();
 
@@ -164,18 +169,19 @@ public class ClientConnect {
 				        });
 
 				    } catch (InterruptedException e) {
-				        e.printStackTrace();
+				    	uiLayer.loadingVidError(e.getMessage());
 				    }
 				}).start();
 			}
 			} catch (Exception e2) {
 				// TODO: handle exception
-				e2.printStackTrace();
+				uiLayer.loadingVidError(e2.getMessage());
 			}
 			
     	
     }
     
+    //Will ask the server what videos with this format i can see.
     public void sendFormatSelection(String format) {
     	String[] respList;
     	String properFormat = format.replace(".", "");
@@ -188,27 +194,26 @@ public class ClientConnect {
 			}
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			uiLayer.loadingVidError(e.getMessage());
+		} catch(Exception e1) {
+			
 		}
     }
     
     
     private ProcessBuilder createProcessBuild(VideoAction action,String[] streamInfo) {
+    	System.out.println(streamInfo);
     	if(action.getAction().equals("down")) {
 			//About the command. 
     		// We want the windo to exit when the video gets downloaded
     		//(udp does not have a "stop" flag because its connectionless so we set a timeout so it stops after 3 sec of no data
-    		
-    		
-    		
-    		if(streamInfo[0].equals("tcp") || streamInfo[0].equals("rtp")) {
+
     			try {
 					Thread.sleep(300);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					uiLayer.loadingVidError(e.getMessage());
 				}
-    		}
     		
 			return new ProcessBuilder(
 					"ffmpeg",

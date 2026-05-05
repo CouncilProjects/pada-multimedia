@@ -2,7 +2,6 @@ package afterdark.ui;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
-import javax.swing.JButton;
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,8 +11,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.awt.FlowLayout;
-import java.awt.Toolkit;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.CardLayout;
@@ -24,6 +21,7 @@ import javax.swing.border.EmptyBorder;
 import afterdark.ClientConnect;
 
 public class MainWindow extends JFrame implements IClientUi{
+	private static final long serialVersionUID = 1L;
 	ActionListener closeListener;
 	private ClientConnect controller;
 	JPanel footerPanel = new JPanel();
@@ -154,7 +152,6 @@ public class MainWindow extends JFrame implements IClientUi{
 
 	@Override
 	public void loadingVid(String message) {
-		System.out.println("DI IT");
 	    SwingUtilities.invokeLater(() -> {
 	        loaderView.setLoadReason(message);
 	        cardLayout.show(contentPanel, "loading");
@@ -167,6 +164,16 @@ public class MainWindow extends JFrame implements IClientUi{
 	public void doneLoading() {
 	    SwingUtilities.invokeLater(() -> {
 	        cardLayout.show(contentPanel, "choice");
+	    });
+	}
+
+	@Override
+	public void loadingVidError(String messageError) {
+		// TODO Auto-generated method stub
+		SwingUtilities.invokeLater(() -> {
+	        loaderView.setLoadErrorReason(messageError);
+	        contentPanel.revalidate();
+	        contentPanel.repaint();
 	    });
 	}
 	

@@ -21,6 +21,7 @@ public class LoadingPanel extends JPanel {
 	private final JLabel testInfoMessage = new JLabel("New label");
 	private final JLabel testMBpsLabel = new JLabel("MBps : ");
 	private final JLabel testMbpsLabel = new JLabel("Mbps : ");
+	private final JLabel errorLabel = new JLabel("");
 
 	/**
 	 * Create the panel.
@@ -47,6 +48,10 @@ public class LoadingPanel extends JPanel {
 		speedTestInfoPanel.setBackground(new Color(61, 56, 70));
 		speedTestInfoPanel.setBorder(new CompoundBorder(new EmptyBorder(20, 0, 0, 0), new EmptyBorder(10, 10, 10, 10)));
 		speedTestInfoPanel.setVisible(false);
+		errorLabel.setForeground(new Color(224, 27, 36));
+		errorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		
+		add(errorLabel);
 		
 		
 		add(speedTestInfoPanel);
@@ -64,6 +69,10 @@ public class LoadingPanel extends JPanel {
 	
 	public void setLoadReason(String newtext) {
 		loadingLabel.setText(newtext);
+	}
+	
+	public void setLoadErrorReason(String newtext) {
+		errorLabel.setText(newtext);
 	}
 	
 	public void setTestResult(String mess,String octo,String mbps) {

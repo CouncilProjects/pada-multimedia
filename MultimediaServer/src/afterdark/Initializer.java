@@ -54,7 +54,16 @@ public class Initializer {
 		
 		//first call videoformatter to format the videos directory
         //The the videoFormatter will create all missing video files from the workDir
+        long start = System.currentTimeMillis();
+
         mediaFormatter.formatAllVideos();
+
+        long end = System.currentTimeMillis();
+
+        long durationMs = end - start;
+        double durationSec = durationMs / 1000.0;
+        double durationMin = durationMs / 60000.0;
+        logger.info(String.format("Video formatting time: %.1fs [%.1fm]",durationSec,durationMin));
         
         // Try to spring up the number of requested servers. they will handle their load balancing registration themselves
 		try {
